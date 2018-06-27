@@ -10,17 +10,17 @@ export class MemoryStorage {
    * 
    * @private
    */
-  private _items: Map<string, Payload>
+  private _sessions: Map<string, Payload>
 
   /**
-   * Initialize a memory session driver
+   * Create a memory session driver
    * 
-   * @param options 
+   * @param map The sessions container
    * @constructor
    * @public
    */
   public constructor (map = new Map()) {
-    this._items = map
+    this._sessions = map
   }
 
   /**
@@ -30,13 +30,13 @@ export class MemoryStorage {
    * @public
    */
   public read (sid: string): any {
-    let payload = this._items.get(sid)
+    let payload = this._sessions.get(sid)
 
     // not found
     if (!payload) return
 
     // expired
-    if (!this._isExpired(payload)) {
+    if (this._isExpired(payload)) {
       this.destroy(sid)
       return
     }
@@ -53,7 +53,7 @@ export class MemoryStorage {
    * @public 
    */
   public write (sid: string, data: any, ttl: number): void {
-    this._items.set(sid, { data, expires: this._getExpiryTime(ttl) })
+    this._sessions.set(sid, { data, expires: this._getExpiryTime(ttl) })
   }
 
   /**
@@ -63,7 +63,7 @@ export class MemoryStorage {
    * @public
    */
   public destroy (sid: string): void {
-    this._items.delete(sid)
+    this._sessions.delete(sid)
   }
 
   /**
@@ -83,6 +83,6 @@ export class MemoryStorage {
    * @private
    */
   private _getExpiryTime (ttl: number): number {
-    return Date.now() + ttl
+    return ttl + Date.now()
   }
 }
