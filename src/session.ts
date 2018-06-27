@@ -2,9 +2,11 @@
 import uniqId from 'crypto-random-string'
 import { MemoryStorage } from './storage/memory'
 
+const TWO_HOURS = 2 * 60 * 60 * 1000
+
 export type Options = {
   storage?: IStorage
-  lifetime: number
+  lifetime?: number
   state?: State
   id?: string
 }
@@ -62,7 +64,12 @@ export class Session {
    * @constructor
    * @public
    */
-  public constructor ({ lifetime, id, storage = new MemoryStorage(), state = {} }: Options) {
+  public constructor ({
+    storage = new MemoryStorage(),
+    lifetime = TWO_HOURS,
+    state = {},
+    id
+  }: Options) {
     this._id = id || this._generateId()
     this._lifetime = lifetime
     this._storage = storage
