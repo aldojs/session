@@ -1,13 +1,14 @@
 
+import { Store } from './store'
 import uniqId from 'crypto-random-string'
 import { MemoryStorage } from './storage/memory'
 
 const TWO_HOURS = 2 * 60 * 60 * 1000
 
 export type Options = {
+  state?: { [key: string]: any }
   storage?: IStorage
   lifetime?: number
-  state?: State
   id?: string
 }
 
@@ -15,10 +16,6 @@ export interface IStorage {
   read (id: string): any
   destroy (id: string): any
   write (id: string, data: any, ttl: number): any
-}
-
-export type State = {
-  [key: string]: any
 }
 
 export class Session {
@@ -34,7 +31,7 @@ export class Session {
    * 
    * @private
    */
-  private _state: State
+  private _state: Store
 
   /**
    * The session store started status
@@ -69,11 +66,11 @@ export class Session {
     lifetime = TWO_HOURS,
     state = {},
     id
-  }: Options) {
+  }: Options = {}) {
     this._id = id || this._generateId()
+    this._state = new Store(state)
     this._lifetime = lifetime
     this._storage = storage
-    this._state = state
   }
 
   /**
@@ -93,8 +90,7 @@ export class Session {
    * @public
    */
   public set (key: string, value: any): this {
-    Reflect.set(this._state, key, value)
-
+    this._state.set(key, value)
     return this
   }
 
@@ -105,7 +101,7 @@ export class Session {
    * @public
    */
   public reset (state = {}): this {
-    this._state = state
+    this._state.reset(state)
     return this
   }
 
@@ -116,7 +112,7 @@ export class Session {
    * @public
    */
   public get (key: string): any {
-    return Reflect.get(this._state, key)
+    return this._state.get(key)
   }
 
   /**
@@ -126,19 +122,19 @@ export class Session {
    * @public
    */
   public has (key: string): boolean {
-    return Reflect.has(this._state, key)
+    return this._state.has(key)
   }
 
   /**
-   * Remove an entry from the session, returning its value
+   * Get the `key` value, removing the entry from the session
    * 
    * @param key 
    * @public
    */
-  public delete (key: string): any {
-    let value = this.get(key)
+  public pull (key: string): any {
+    let value = this._state.get(key)
 
-    Reflect.deleteProperty(this._state, key)
+    this._state.delete(key)
 
     return value
   }
@@ -151,9 +147,9 @@ export class Session {
    */
   public async start (): Promise<void> {
     if (!this._started) {
-      let out = await this._read()
+      let data = await this._read()
 
-      this._state = this._decode(out)
+      this._state.merge(this._decode(data))
     }
 
     this._started = true
