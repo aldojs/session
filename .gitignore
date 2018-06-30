@@ -1,3 +1,7 @@
+lib
+.todo
+.vscode
+
 # Logs
 logs
 *.log
