@@ -42,15 +42,13 @@ export class Store {
   }
 
   /**
-   * Merge the session state entirely
+   * Merge the new session state
    * 
    * @param state The new session state
    * @public
    */
   public merge (state = {}) {
-    this.isEmpty() ?
-      this.reset(state) :
-      Object.assign(this._state, state)
+    Object.assign(this._state, state)
   }
 
   /**
