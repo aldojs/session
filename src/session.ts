@@ -5,14 +5,12 @@ import { MemoryStorage } from './storage/memory'
 
 const TWO_HOURS = 2 * 60 * 60 * 1000
 
-export type Options = {
-  state?: { [key: string]: any }
-  storage?: IStorage
-  lifetime?: number
-  id?: string
+export interface SerializerInterface {
+  parse (input: string): object
+  stringify (input: object): string
 }
 
-export interface IStorage {
+export interface StorageInterface {
   read (id: string): any
   destroy (id: string): any
   write (id: string, data: any, ttl: number): any
@@ -31,7 +29,7 @@ export class Session {
    * 
    * @private
    */
-  private _state: Store
+  private _state = new Store()
 
   /**
    * The session store started status
@@ -45,31 +43,32 @@ export class Session {
    * 
    * @private
    */
-  private _lifetime: number
+  private _lifetime = TWO_HOURS
 
   /**
    * The session storage adapter
    * 
    * @private
    */
-  private _storage: IStorage
+  private _storage: StorageInterface
+
+  /**
+   * The state serializer
+   * 
+   * @private
+   */
+  private _serializer: SerializerInterface = JSON
 
   /**
    * Create a new session instance
    * 
-   * @param options
+   * @param storage The persistence driver
+   * @param id The session identifier
    * @constructor
    * @public
    */
-  public constructor ({
-    storage = new MemoryStorage(),
-    lifetime = TWO_HOURS,
-    state = {},
-    id
-  }: Options = {}) {
+  public constructor (storage: StorageInterface = new MemoryStorage(), id?: string) {
     this._id = id || this._generateId()
-    this._state = new Store(state)
-    this._lifetime = lifetime
     this._storage = storage
   }
 
@@ -80,6 +79,28 @@ export class Session {
    */
   public get id (): string {
     return this._id
+  }
+
+  /**
+   * Set the session lifetime
+   * 
+   * @param value The lifetime in milliseconds
+   * @public
+   */
+  public lifetime (value: number): this {
+    this._lifetime = value
+    return this
+  }
+
+  /**
+   * Set the session state serializer
+   * 
+   * @param obj The serializer object
+   * @public
+   */
+  public serializer (obj: SerializerInterface): this {
+    this._serializer = obj
+    return this
   }
 
   /**
@@ -146,11 +167,11 @@ export class Session {
    * @async
    */
   public async start (): Promise<void> {
-    if (!this._started) {
-      let data = await this._read()
+    if (this._started) return
 
-      this._state.merge(this._decode(data))
-    }
+    let data = await this._read()
+
+    this._state.merge(this._parse(data))
 
     this._started = true
   }
@@ -162,6 +183,8 @@ export class Session {
    * @async
    */
   public async commit (): Promise<void> {
+    if (!this._started) return
+
     try {
       await this._write()
     } catch (e) {
@@ -202,7 +225,7 @@ export class Session {
    */
   private _write () {
     return this._storage.write(
-      this._id, this._encode(this._state), this._lifetime
+      this._id, this._stringify(this._state), this._lifetime
     )
   }
 
@@ -241,8 +264,8 @@ export class Session {
    * @param input 
    * @private
    */
-  private _encode (input: object) {
-    return JSON.stringify(input)
+  private _stringify (input: object): string {
+    return this._serializer.stringify(input)
   }
 
   /**
@@ -251,9 +274,9 @@ export class Session {
    * @param input 
    * @private
    */
-  private _decode (input: string) {
+  private _parse (input: string): object {
     try {
-      return JSON.parse(input)
+      return this._serializer.parse(input)
     } catch (error) {
       return {}
     }
