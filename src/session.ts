@@ -1,5 +1,5 @@
 
-import { Store } from './store'
+import { Store } from './_store'
 import uniqId from 'crypto-random-string'
 import { MemoryStorage } from './storage/memory'
 
@@ -10,7 +10,7 @@ export interface SerializerInterface {
   stringify (input: object): string
 }
 
-export type StorageInterface ={
+export interface StorageContract {
   read (id: string): any
   remove (id: string): any
   write (id: string, data: any, ttl: number): any
@@ -50,7 +50,7 @@ export class Session {
    * 
    * @private
    */
-  private _storage: StorageInterface
+  private _storage: StorageContract
 
   /**
    * The state serializer
@@ -67,7 +67,7 @@ export class Session {
    * @constructor
    * @public
    */
-  public constructor (storage: StorageInterface = new MemoryStorage(), id?: string) {
+  public constructor (storage: StorageContract = new MemoryStorage(), id?: string) {
     this._id = id || this._generateId()
     this._storage = storage
   }
