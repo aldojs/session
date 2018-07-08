@@ -5,17 +5,61 @@ import { MemoryStorage } from './storage/memory'
 
 const TWO_HOURS = 2 * 60 * 60 * 1000
 
-export interface SerializerInterface {
+/**
+ * The session state serializer
+ */
+export interface SerializerContract {
+  /**
+   * Deserialize the given string
+   * 
+   * @param input The serialized string
+   */
   parse (input: string): object
+
+  /**
+   * Serialize the given object
+   * 
+   * @param input The object to serialize
+   */
   stringify (input: object): string
 }
 
+/**
+ * The session storage interface
+ */
 export interface StorageContract {
-  read (id: string): any
-  remove (id: string): any
-  write (id: string, data: any, ttl: number): any
+  /**
+   * Retrieve an entry by its key
+   * 
+   * @param key The entry key
+   */
+  read (key: string): any
+
+  /**
+   * Remove an entry by its key
+   * 
+   * @param key The entry key
+   */
+  remove (key: string): any
+
+  /**
+   * Save an entry's data for the given time
+   * 
+   * @param key The entry key
+   * @param data The entry data
+   * @param ttl The entry time to live
+   */
+  write (key: string, data: any, ttl: number): any
 }
 
+/**
+ * The session manager class
+ * 
+ * Manages the internal state, persist the data for further use
+ * 
+ * @public
+ * @class
+ */
 export class Session {
   /**
    * The session identifier
@@ -57,7 +101,7 @@ export class Session {
    * 
    * @private
    */
-  private _serializer: SerializerInterface = JSON
+  private _serializer: SerializerContract = JSON
 
   /**
    * Create a new session instance
@@ -98,7 +142,7 @@ export class Session {
    * @param obj The serializer object
    * @public
    */
-  public serializer (obj: SerializerInterface): this {
+  public serializer (obj: SerializerContract): this {
     this._serializer = obj
     return this
   }
@@ -230,7 +274,7 @@ export class Session {
    * @private
    * @async
    */
-  private _write (data) {
+  private _write (data: string) {
     return this._storage.write(this._id, data, this._lifetime)
   }
 
