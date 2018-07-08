@@ -37,7 +37,7 @@ export class MemoryStorage {
 
     // expired
     if (this._isExpired(payload)) {
-      this.destroy(sid)
+      this.remove(sid)
       return
     }
 
@@ -57,12 +57,12 @@ export class MemoryStorage {
   }
 
   /**
-   * Destroy the given session state
+   * Remove the given session data
    * 
    * @param sid The session id
    * @public
    */
-  public destroy (sid: string): void {
+  public remove (sid: string): void {
     this._sessions.delete(sid)
   }
 

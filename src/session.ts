@@ -10,9 +10,9 @@ export interface SerializerInterface {
   stringify (input: object): string
 }
 
-export interface StorageInterface {
+export type StorageInterface ={
   read (id: string): any
-  destroy (id: string): any
+  remove (id: string): any
   write (id: string, data: any, ttl: number): any
 }
 
@@ -169,9 +169,13 @@ export class Session {
   public async start (): Promise<void> {
     if (this._started) return
 
-    let data = await this._read()
+    try {
+      let data = await this._read()
 
-    this._state.merge(this._parse(data))
+      this._state.merge(this._parse(data))
+    } catch (error) {
+      // do nothing
+    }
 
     this._started = true
   }
@@ -186,7 +190,9 @@ export class Session {
     if (!this._started) return
 
     try {
-      await this._write()
+      let data = this._stringify(this._state)
+
+      await this._write(data)
     } catch (e) {
       // do nothing
     }
@@ -220,13 +226,12 @@ export class Session {
   /**
    * Save the state in the storage
    * 
+   * @param data The serialized data to save
    * @private
    * @async
    */
-  private _write () {
-    return this._storage.write(
-      this._id, this._stringify(this._state), this._lifetime
-    )
+  private _write (data) {
+    return this._storage.write(this._id, data, this._lifetime)
   }
 
   /**
@@ -246,7 +251,7 @@ export class Session {
    * @async
    */
   private _destroy () {
-    return this._storage.destroy(this._id)
+    return this._storage.remove(this._id)
   }
 
   /**
@@ -275,10 +280,6 @@ export class Session {
    * @private
    */
   private _parse (input: string): object {
-    try {
-      return this._serializer.parse(input)
-    } catch (error) {
-      return {}
-    }
+    return this._serializer.parse(input)
   }
 }

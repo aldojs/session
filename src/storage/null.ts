@@ -22,12 +22,12 @@ export class NullStorage {
   }
 
   /**
-   * Destroy the session state
+   * Remove the session data
    * 
    * @param sid The session id
    * @public
    */
-  public destroy (sid: string): void {
+  public remove (sid: string): void {
     // do nothing
   }
 }
