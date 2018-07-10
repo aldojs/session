@@ -55,7 +55,7 @@ export interface StorageContract {
 /**
  * The session manager class
  * 
- * Manages the internal state, persist the data for further use
+ * Manages the internal state, and persists the data for further use
  * 
  * @public
  * @class
@@ -117,15 +117,6 @@ export class Session {
   }
 
   /**
-   * Get the session id
-   * 
-   * @public
-   */
-  public get id (): string {
-    return this._id
-  }
-
-  /**
    * Set the session lifetime
    * 
    * @param value The lifetime in milliseconds
@@ -165,7 +156,7 @@ export class Session {
    * @param state The new session state
    * @public
    */
-  public reset (state = {}): this {
+  public reset (state: object = {}): this {
     this._state.reset(state)
     return this
   }
@@ -234,7 +225,7 @@ export class Session {
     if (!this._started) return
 
     try {
-      let data = this._stringify(this._state)
+      let data = this._stringify()
 
       await this._write(data)
     } catch (e) {
@@ -308,13 +299,13 @@ export class Session {
   }
 
   /**
-   * Serialize the given object
+   * Serialize the session state
    * 
    * @param input 
    * @private
    */
-  private _stringify (input: object): string {
-    return this._serializer.stringify(input)
+  private _stringify (): string {
+    return this._serializer.stringify(this._state)
   }
 
   /**
