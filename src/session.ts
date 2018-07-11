@@ -53,6 +53,52 @@ export interface StorageContract {
 }
 
 /**
+ * The session store interface
+ */
+export interface StoreContract {
+  /**
+   * Get the JSON representation of the state
+   */
+  toJSON (): object
+
+  /**
+   * Get the `key` value
+   * 
+   * @param key The entry's key
+   */
+  get (key: string): any
+
+  /**
+   * Delete a entry by its `key`
+   * 
+   * @param key The entry's key
+   */
+  delete (key: string): any
+
+  /**
+   * Check whether an entry is present or not
+   * 
+   * @param key The entry's key
+   */
+  has (key: string): boolean
+
+  /**
+   * Replace the state entirely
+   * 
+   * @param state The state data
+   */
+  reset (state?: object): any
+
+  /**
+   * Set a key/value pair
+   * 
+   * @param key The entry's key, or a plain object
+   * @param value The entry's value
+   */
+  set (key: string | object, value?: any): any
+}
+
+/**
  * The session manager class
  * 
  * Manages the internal state, and persists the data for further use
@@ -73,7 +119,7 @@ export class Session {
    * 
    * @private
    */
-  private _state = new Store()
+  private _state: StoreContract
 
   /**
    * The session store started status
@@ -108,16 +154,29 @@ export class Session {
    * 
    * @param storage The persistence driver
    * @param id The session identifier
+   * @param store The state store
    * @constructor
    * @public
    */
-  public constructor (storage: StorageContract = new MemoryStorage(), id?: string) {
-    this._id = id || this._generateId()
+  public constructor (storage: StorageContract = new MemoryStorage(), id = '', store: StoreContract = new Store()) {
+    if (!id) {
+      // we set this flag to `true` to prevent loading the state from the storage,
+      // since the identifier will be generated and of course not yet saved.
+      this._started = true
+
+      // generate a new identifier for this session
+      id = this._generateId()
+    }
+
+    this._id = id
+    this._state = store
     this._storage = storage
   }
 
   /**
-   * Set the session lifetime
+   * Set the session lifetime.
+   * 
+   * Allow using different lifetimes for certain cases
    * 
    * @param value The lifetime in milliseconds
    * @public
@@ -128,7 +187,7 @@ export class Session {
   }
 
   /**
-   * Set the session state serializer
+   * Set the session data serializer
    * 
    * @param obj The serializer object
    * @public
@@ -196,43 +255,49 @@ export class Session {
   }
 
   /**
-   * Start the session, reading the state from the storage
+   * Start the session, reading the state from the storage.
+   * 
+   * Will return `false` if the session is already started or newly created
    * 
    * @public
    * @async
    */
-  public async start (): Promise<void> {
-    if (this._started) return
+  public async start (): Promise<boolean> {
+    // the session is already started or newly created
+    if (this._started) return false
 
     try {
+      // the storage can return null or undefined if the session was expired
       let data = await this._read()
 
-      this._state.merge(this._parse(data))
-    } catch (error) {
-      // do nothing
-    }
-
-    this._started = true
-  }
-
-  /**
-   * Save the session, writing the state in the storage
-   * 
-   * @public
-   * @async
-   */
-  public async commit (): Promise<void> {
-    if (!this._started) return
-
-    try {
-      let data = this._stringify()
-
-      await this._write(data)
+      // if an error occurs during loading or parsing,
+      // the session state will not be updated
+      this._state.set(this._parse(data))
     } catch (e) {
       // do nothing
     }
 
-    this._started = false
+    // prevent restarting multiple times
+    return this._started = true
+  }
+
+  /**
+   * Save the session, writing the state in the storage.
+   * 
+   * @public
+   * @async
+   */
+  public async commit (): Promise<boolean> {
+    try {
+      await this._write(this._serialize())
+    } catch (e) {
+      // we return `false` instead of rethrowing the error object,
+      // to inform the consumer that the session was not saved correctly.
+      // this method can be called multiple times to persist the session data.
+      return false
+    }
+
+    return true
   }
 
   /**
@@ -253,7 +318,13 @@ export class Session {
    * @async
    */
   public async regenerate (destroy = false): Promise<void> {
-    if (destroy) await this._destroy()
+    if (destroy) {
+      try {
+        await this._destroy()
+      } catch (error) {
+        // do nothing
+      }
+    }
 
     this._id = this._generateId()
   }
@@ -304,17 +375,17 @@ export class Session {
    * @param input 
    * @private
    */
-  private _stringify (): string {
-    return this._serializer.stringify(this._state)
+  private _serialize (): string {
+    return this._serializer.stringify(this._state.toJSON())
   }
 
   /**
-   * Unserialize the given object
+   * Unserialize the given string
    * 
-   * @param input 
+   * @param data 
    * @private
    */
-  private _parse (input: string): object {
-    return this._serializer.parse(input)
+  private _parse (data: string): object {
+    return this._serializer.parse(data)
   }
 }
