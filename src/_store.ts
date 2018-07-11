@@ -76,6 +76,15 @@ export class Store {
   }
 
   /**
+  * Determine the state is empty or not
+  * 
+  * @public
+  */
+  public isEmpty (): boolean {
+    return Object.keys(this._state).length === 0
+  }
+
+  /**
    * Get the JSON representation
    * 
    * @public

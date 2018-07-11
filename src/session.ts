@@ -1,12 +1,11 @@
 
 import { Store } from './_store'
 import uniqId from 'crypto-random-string'
-import { MemoryStorage } from './storage/memory'
 
 const TWO_HOURS = 2 * 60 * 60 * 1000
 
 /**
- * The session state serializer
+ * The session state serializer interface
  */
 export interface SerializerContract {
   /**
@@ -60,6 +59,11 @@ export interface StoreContract {
    * Get the JSON representation of the state
    */
   toJSON (): object
+
+  /**
+   * Determine the state is empty or not
+   */
+  isEmpty (): boolean
 
   /**
    * Get the `key` value
@@ -158,13 +162,12 @@ export class Session {
    * @constructor
    * @public
    */
-  public constructor (storage: StorageContract = new MemoryStorage(), id = '', store: StoreContract = new Store()) {
+  public constructor (storage: StorageContract, id = '', store: StoreContract = new Store()) {
     if (!id) {
       // we set this flag to `true` to prevent loading the state from the storage,
       // since the identifier will be generated and of course not yet saved.
       this._started = true
 
-      // generate a new identifier for this session
       id = this._generateId()
     }
 
@@ -200,12 +203,25 @@ export class Session {
   /**
    * Set an entry in the session
    * 
-   * @param key 
-   * @param value 
+   * @param key The entry's key
+   * @param value The entry's value
    * @public
    */
-  public set (key: string, value: any): this {
-    this._state.set(key, value)
+  public set (key: string, value: any): this
+
+  /**
+   * Set multiple entries
+   * 
+   * @param values The values object
+   * @public
+   */
+  public set (values: object): this
+
+  /**
+   * @inheritDoc
+   */
+  public set (one: any, two?: any) {
+    this._state.set(one, two)
     return this
   }
 
@@ -284,16 +300,23 @@ export class Session {
   /**
    * Save the session, writing the state in the storage.
    * 
+   * Will not persist if the session state is empty.
+   * 
+   * May be called multiple times to persist the session data.
+   * 
+   * @param force Force saving flag
    * @public
    * @async
    */
-  public async commit (): Promise<boolean> {
+  public async commit (force = false): Promise<boolean> {
+    // prevent i/o operations for empty sessions
+    if (!force && this._state.isEmpty()) return true
+
     try {
       await this._write(this._serialize())
     } catch (e) {
       // we return `false` instead of rethrowing the error object,
       // to inform the consumer that the session was not saved correctly.
-      // this method can be called multiple times to persist the session data.
       return false
     }
 
@@ -311,7 +334,7 @@ export class Session {
   }
 
   /**
-   * Generate a new session identifier
+   * Maintain the actual state and regenerate an new identifier
    * 
    * @param destroy if true, will destroy the storage entry
    * @public
