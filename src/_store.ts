@@ -27,7 +27,11 @@ export class Store {
    * @param value 
    * @public
    */
-  public set (key: string, value: any) {
+  public set (key: string | object, value?: any) {
+    if (typeof key === 'object') {
+      return Object.assign(this._state, key)
+    }
+
     Reflect.set(this._state, key, value)
   }
 
@@ -39,16 +43,6 @@ export class Store {
    */
   public reset (state = {}) {
     this._state = state
-  }
-
-  /**
-   * Merge the new session state
-   * 
-   * @param state The new session state
-   * @public
-   */
-  public merge (state = {}) {
-    Object.assign(this._state, state)
   }
 
   /**
@@ -79,15 +73,6 @@ export class Store {
    */
   public delete (key: string) {
     Reflect.deleteProperty(this._state, key)
-  }
-
-  /**
-   * Determine the state is empty or not
-   * 
-   * @public
-   */
-  public isEmpty (): boolean {
-    return Object.keys(this._state).length === 0
   }
 
   /**
