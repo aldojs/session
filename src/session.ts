@@ -5,25 +5,6 @@ import uniqId from 'crypto-random-string'
 const TWO_HOURS = 2 * 60 * 60 * 1000
 
 /**
- * The session state serializer interface
- */
-export interface SerializerContract {
-  /**
-   * Deserialize the given string
-   * 
-   * @param input The serialized string
-   */
-  parse (input: string): object
-
-  /**
-   * Serialize the given object
-   * 
-   * @param input The object to serialize
-   */
-  stringify (input: object): string
-}
-
-/**
  * The session storage interface
  */
 export interface StorageContract {
@@ -147,13 +128,6 @@ export class Session {
   private _storage: StorageContract
 
   /**
-   * The state serializer
-   * 
-   * @private
-   */
-  private _serializer: SerializerContract = JSON
-
-  /**
    * Create a new session instance
    * 
    * @param storage The persistence driver
@@ -162,10 +136,10 @@ export class Session {
    * @constructor
    * @public
    */
-  public constructor (storage: StorageContract, id = '', store: StoreContract = new Store()) {
+  public constructor (storage: StorageContract, id?: string, store: StoreContract = new Store()) {
     if (!id) {
-      // we set this flag to `true` to prevent loading the state from the storage,
-      // since the identifier will be generated and of course not yet saved.
+      // we set this flag to `true` to prevent an unnecessary loading
+      // from the storage, since the identifier is newly generated.
       this._started = true
 
       id = this._generateId()
@@ -174,6 +148,15 @@ export class Session {
     this._id = id
     this._state = store
     this._storage = storage
+  }
+
+  /**
+   * The session identifier accessor
+   * 
+   * @readonly
+   */
+  public get id () {
+    return this._id
   }
 
   /**
@@ -186,17 +169,6 @@ export class Session {
    */
   public lifetime (value: number): this {
     this._lifetime = value
-    return this
-  }
-
-  /**
-   * Set the session data serializer
-   * 
-   * @param obj The serializer object
-   * @public
-   */
-  public serializer (obj: SerializerContract): this {
-    this._serializer = obj
     return this
   }
 
@@ -279,21 +251,16 @@ export class Session {
    * @async
    */
   public async start (): Promise<boolean> {
-    // the session is already started or newly created
     if (this._started) return false
 
     try {
-      // the storage can return null or undefined if the session was expired
       let data = await this._read()
 
-      // if an error occurs during loading or parsing,
-      // the session state will not be updated
-      this._state.set(this._parse(data))
+      this._state.set(data)
     } catch (e) {
       // do nothing
     }
 
-    // prevent restarting multiple times
     return this._started = true
   }
 
@@ -302,18 +269,18 @@ export class Session {
    * 
    * Will not persist if the session state is empty.
    * 
-   * May be called multiple times to persist the session data.
+   * May be called as much as necessary.
    * 
    * @param force Force saving flag
    * @public
    * @async
    */
   public async commit (force = false): Promise<boolean> {
-    // prevent i/o operations for empty sessions
+    // prevent i/o operations for empty sessions, unless it's forced
     if (!force && this._state.isEmpty()) return true
 
     try {
-      await this._write(this._serialize())
+      await this._write(this._state.toJSON())
     } catch (e) {
       // we return `false` instead of rethrowing the error object,
       // to inform the consumer that the session was not saved correctly.
@@ -355,11 +322,11 @@ export class Session {
   /**
    * Save the state in the storage
    * 
-   * @param data The serialized data to save
+   * @param data The state to save
    * @private
    * @async
    */
-  private _write (data: string) {
+  private _write (data: object) {
     return this._storage.write(this._id, data, this._lifetime)
   }
 
@@ -390,25 +357,5 @@ export class Session {
    */
   private _generateId (): string {
     return uniqId(40)
-  }
-
-  /**
-   * Serialize the session state
-   * 
-   * @param input 
-   * @private
-   */
-  private _serialize (): string {
-    return this._serializer.stringify(this._state.toJSON())
-  }
-
-  /**
-   * Unserialize the given string
-   * 
-   * @param data 
-   * @private
-   */
-  private _parse (data: string): object {
-    return this._serializer.parse(data)
   }
 }
