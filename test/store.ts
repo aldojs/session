@@ -1,9 +1,9 @@
 
 import 'mocha'
-import assert from 'assert'
-import { Store } from '../../src/store'
+import * as assert from 'assert'
+import { Store } from '../src/_store'
 
-describe('unit test the state store', () => {
+describe('test the state store', () => {
   it('should set state entries', () => {
     let state: any = {}
     let store = new Store(state)
@@ -38,18 +38,19 @@ describe('unit test the state store', () => {
     let oldState = { 'foo': 'bar' }
     let store = new Store(oldState)
 
+    assert.ok(store.has('foo'))
+
     store.reset({ 'baz': 123 })
 
-    assert.ok(store.has('bae'))
     assert.ok(!store.has('foo'))
     assert.deepEqual(store.toJSON(), { 'baz': 123 })
   })
 
-  it('should merge the new state', () => {
+  it('should merge the values', () => {
     let state = { 'foo': true, 'bar': false }
     let store = new Store(state)
 
-    store.merge({ 'bar': 123, baz: false })
+    store.set({ 'bar': 123, baz: false })
 
     assert.deepEqual(store.toJSON(), {
       foo: true, bar: 123, baz: false
