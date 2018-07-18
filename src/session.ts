@@ -1,6 +1,6 @@
 
 import { Store } from './_store'
-import uniqId from 'crypto-random-string'
+import randomString from 'crypto-random-string'
 
 const TWO_HOURS = 2 * 60 * 60 * 1000
 
@@ -107,7 +107,7 @@ export class Session {
   private _state: StoreContract
 
   /**
-   * The session store started status
+   * The session start status
    * 
    * @private
    */
@@ -138,7 +138,7 @@ export class Session {
    */
   public constructor (storage: StorageContract, id?: string, store: StoreContract = new Store()) {
     if (!id) {
-      // we set this flag to `true` to prevent an unnecessary loading
+      // we set this flag to `true` to prevent an unnecessary loading of data
       // from the storage, since the identifier is newly generated.
       this._started = true
 
@@ -160,6 +160,15 @@ export class Session {
   }
 
   /**
+   * Check if the session is started
+   * 
+   * @public
+   */
+  public isStarted (): boolean {
+    return this._started
+  }
+
+  /**
    * Set the session lifetime.
    * 
    * Allow using different lifetimes for certain cases
@@ -167,7 +176,7 @@ export class Session {
    * @param value The lifetime in milliseconds
    * @public
    */
-  public lifetime (value: number): this {
+  public setLifetime (value: number): this {
     this._lifetime = value
     return this
   }
@@ -256,7 +265,9 @@ export class Session {
     try {
       let data = await this._read()
 
-      this._state.set(data)
+      // the storage may return `null` or `undefined`,
+      // if the session is expired or doesn't exist yet
+      data && this._state.set(data)
     } catch (e) {
       // do nothing
     }
@@ -267,7 +278,7 @@ export class Session {
   /**
    * Save the session, writing the state in the storage.
    * 
-   * Will not persist if the session state is empty.
+   * Will not persist if the state is empty, unless `force` is set to `true`.
    * 
    * May be called as much as necessary.
    * 
@@ -356,6 +367,6 @@ export class Session {
    * @private
    */
   private _generateId (): string {
-    return uniqId(40)
+    return randomString(40)
   }
 }
