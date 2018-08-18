@@ -2,15 +2,16 @@
 import 'mocha'
 import { stub } from 'sinon'
 import * as assert from 'assert'
-import { Session, StorageContract } from '../src/session'
-import { Store } from '../src/_store';
+import { Store } from '../src/_store'
+import { Session } from '../src/session'
+import { Storage } from './_support/null-storage'
 
 describe('test session manager', () => {
   describe('session initialization', () => {
     describe('when the `id` is not given', () => {
       it('should generate a new identifier and flagged as started', () => {
-        let session = new Session({} as any)
-        let _stub = stub(session, '_generateId')
+        let session = new Session(new Storage())
+        let _stub = stub(session as any, '_generateId')
 
         _stub.onFirstCall().returns('foo')
 
@@ -21,7 +22,7 @@ describe('test session manager', () => {
 
     describe('when the `id` is provided', () => {
       it('should use the given identifier', () => {
-        let session = new Session({} as any, 'foo')
+        let session = new Session(new Storage(), 'foo')
 
         assert.equal(session.id, 'foo')
         assert.ok(!session.isStarted())
@@ -32,7 +33,7 @@ describe('test session manager', () => {
   describe('session.pull(key)', () => {
     it('should remove the item from the store', () => {
       let store = new Store({ 'foo': 'bar' })
-      let session = new Session({} as any, 'abc', store)
+      let session = new Session(new Storage(), 'abc', store)
 
       let value = session.pull('foo')
 
@@ -44,8 +45,8 @@ describe('test session manager', () => {
   describe('session.start()', () => {
     describe('when the session is started', () => {
       it('should not start again', async () => {
-        let session = new Session({} as any)
-        let _stub = stub(session, '_read')
+        let session = new Session(new Storage())
+        let _stub = stub(session as any, '_read')
 
         assert.ok(session.isStarted())
 
@@ -58,8 +59,8 @@ describe('test session manager', () => {
 
     describe('when the session is not started', () => {
       it('should read the data from the storage', async () => {
-        let session = new Session({} as any, 'abc')
-        let _stub = stub(session, '_read')
+        let session = new Session(new Storage(), 'abc')
+        let _stub = stub(session as any, '_read')
 
         _stub.onFirstCall().returns({ 'foo': 'bar' })
 
@@ -74,8 +75,8 @@ describe('test session manager', () => {
 
     describe('when an error is thrown', () => {
       it('should not throw errors', async () => {
-        let session = new Session({} as any, 'abc')
-        let _stub = stub(session, '_read')
+        let session = new Session(new Storage(), 'abc')
+        let _stub = stub(session as any, '_read')
 
         _stub.onFirstCall().throws()
 
@@ -92,11 +93,3 @@ describe('test session manager', () => {
     // 
   })
 })
-
-function _createStorage (): StorageContract {
-  return {
-    read (key: string): any {},
-    remove (key: string): any {},
-    write (key: string, data: any, ttl: number): any {}
-  }
-}

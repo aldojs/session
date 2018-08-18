@@ -1,6 +1,6 @@
 
 import { Store } from './_store'
-import randomString from 'crypto-random-string'
+import * as randomString from 'crypto-random-string'
 
 const TWO_HOURS = 2 * 60 * 60 * 1000
 
