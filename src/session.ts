@@ -169,6 +169,24 @@ export class Session {
   }
 
   /**
+   * Determine the session's state is empty or not
+   * 
+   * @public
+   */
+  public isEmpty (): boolean {
+    return this._state.isEmpty()
+  }
+
+  /**
+   * Get a JSON representation of the state
+   * 
+   * @public
+   */
+  public toJSON (): object {
+    return this._state.toJSON()
+  }
+
+  /**
    * Set the session lifetime.
    * 
    * Allow using different lifetimes for certain cases
@@ -267,8 +285,10 @@ export class Session {
 
       // the storage may return `null` or `undefined`,
       // if the session is expired or doesn't exist yet
-      data && this._state.set(data)
+      data && this.set(data)
     } catch (e) {
+      // TODO: use a logger
+
       // do nothing
     }
 
@@ -288,11 +308,13 @@ export class Session {
    */
   public async commit (force = false): Promise<boolean> {
     // prevent i/o operations for empty sessions, unless it's forced
-    if (!force && this._state.isEmpty()) return true
+    if (!force && this.isEmpty()) return true
 
     try {
-      await this._write(this._state.toJSON())
+      await this._write(this.toJSON())
     } catch (e) {
+      // TODO: use a logger
+
       // we return `false` instead of rethrowing the error object,
       // to inform the consumer that the session was not saved correctly.
       return false
@@ -319,12 +341,12 @@ export class Session {
    * @async
    */
   public async regenerate (destroy = false): Promise<void> {
-    if (destroy) {
-      try {
-        await this._destroy()
-      } catch (error) {
-        // do nothing
-      }
+    if (destroy) try {
+      await this._destroy()
+    } catch (error) {
+      // TODO: use a logger
+
+      // do nothing
     }
 
     this._id = this._generateId()

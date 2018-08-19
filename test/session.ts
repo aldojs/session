@@ -2,20 +2,17 @@
 import 'mocha'
 import { stub } from 'sinon'
 import * as assert from 'assert'
+import { Storage } from './_storage'
 import { Store } from '../src/_store'
 import { Session } from '../src/session'
-import { Storage } from './_support/null-storage'
 
 describe('test session manager', () => {
   describe('session initialization', () => {
     describe('when the `id` is not given', () => {
       it('should generate a new identifier and flagged as started', () => {
         let session = new Session(new Storage())
-        let _stub = stub(session as any, '_generateId')
 
-        _stub.onFirstCall().returns('foo')
-
-        assert.equal(session.id, 'foo')
+        assert.ok(/[a-z0-9]/i.test(session.id))
         assert.ok(session.isStarted())
       })
     })
@@ -80,7 +77,11 @@ describe('test session manager', () => {
 
         _stub.onFirstCall().throws()
 
-        let flag = await session.start()
+        try {
+          var flag = await session.start()
+        } catch (e) {
+          assert.fail('should not throw')
+        }
 
         assert.ok(session.isStarted())
         assert.ok(_stub.calledOnce)
@@ -89,7 +90,81 @@ describe('test session manager', () => {
     })
   })
 
+  describe('session.regenerate(destroy?)', () => {
+    describe('when `destroy` equals `false`', () => {
+      it('should regenerate a new session identifier', async () => {
+        let session = new Session(new Storage(), 'foo')
+        let _stub = stub(session as any, '_generateId')
+
+        _stub.onFirstCall().returns('bar')
+
+        await session.regenerate()
+
+        assert.equal(session.id, 'bar')
+      })
+    })
+
+    describe('when `destroy` equals `true`', () => {
+      it('should remove the state from the storage', async () => {
+        let session = new Session(new Storage(), 'foo')
+        let _stub1 = stub(session as any, '_generateId')
+        let _stub2 = stub(session as any, '_destroy')
+
+        _stub1.onFirstCall().returns('bar')
+
+        await session.regenerate(true)
+
+        assert.ok(_stub1.called)
+        assert.ok(_stub2.called)
+        assert.equal(session.id, 'bar')
+      })
+    })
+  })
+
+  describe('session.invalidate()', () => {
+    it('should destroy and regenerate a new empty session', async () => {
+      let session = new Session(new Storage(), 'abc321')
+      let _stub = stub(session as any, '_destroy')
+
+      await session.set('foo', 'bar').invalidate()
+
+      assert.notEqual(session.id, 'abc321')
+      assert.ok(session.isEmpty())
+    })
+  })
+
   describe('session.commit(force?)', () => {
-    // 
+    describe('when `force` is false', () => {
+      it('should skip if the state is empty', async () => {
+        let session = new Session(new Storage())
+        let _stub = stub(session as any, '_write')
+
+        await session.commit()
+
+        assert.ok(_stub.notCalled)
+      })
+
+      it('should persist the state if available', async () => {
+        let session = new Session(new Storage())
+        let _stub = stub(session as any, '_write')
+
+        session.set('foo', 'bar')
+
+        await session.commit()
+
+        assert.ok(_stub.calledWith({ foo: 'bar' }))
+      })
+    })
+
+    describe('when `force` is `true`', () => {
+      it('should force saving, even if the state is empty', async () => {
+        let session = new Session(new Storage())
+        let _stub = stub(session as any, '_write')
+
+        await session.commit(true)
+
+        assert.ok(_stub.calledWith({}))
+      })
+    })
   })
 })
