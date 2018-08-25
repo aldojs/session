@@ -138,11 +138,11 @@ export class Session {
    */
   public constructor (storage: StorageContract, id?: string, store: StoreContract = new Store()) {
     if (!id) {
+      id = this._generateId()
+
       // we set this flag to `true` to prevent an unnecessary loading of data
       // from the storage, since the identifier is newly generated.
       this._started = true
-
-      id = this._generateId()
     }
 
     this._id = id
