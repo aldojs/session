@@ -26,7 +26,7 @@ export declare class Session {
    * @param id The session identifier
    * @param state 
    */
-  constructor (backend: Storage, id: string, state: object);
+  constructor (backend: Storage, id: string, state: State);
 
   /**
    * Set the session lifetime.
@@ -50,43 +50,49 @@ export declare class Session {
    * @param key 
    * @param value 
    */
-  set(object: State): this;
-  set(key: string | symbol, value: any): this;
+  set(key: string, value: any): this;
+
+  /**
+   * Merge with the new given state
+   * 
+   * @param object 
+   */
+  merge(object: State): this;
 
   /**
    * Replace the state entirely
    * 
-   * @param newState
+   * @param object
    */
-  reset(newState?: object): this;
+  reset(object?: State): this;
 
   /**
    * Get the `key` value
    * 
    * @param key 
    */
-  get(key: string | symbol): any;
+  get(key: string): any;
 
   /**
    * Check if the `key` is present
    * 
    * @param key 
    */
-  has(key: string | symbol): boolean;
+  has(key: string): boolean;
 
   /**
    * Delete the `key` entry
    * 
    * @param key 
    */
-  delete (key: string | symbol): boolean;
+  delete (key: string): boolean;
 
   /**
    * Get the `key` value, removing the entry from the session
    * 
    * @param key
    */
-  pull(key: string | symbol): any;
+  pull(key: string): any;
 
   /**
    * Get the JSON representation
@@ -124,7 +130,7 @@ export declare class Session {
  * 
  */
 export interface State {
-  [k in (string | symbol)]: any;
+  [key: string]: any;
 }
 
 /**
@@ -141,7 +147,7 @@ export interface Storage {
    * 
    * @param id The session identifier
    */
-  read(id: string): object | Promise<object>;
+  read(id: string): State | Promise<State>;
 
   /**
    * 
