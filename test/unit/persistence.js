@@ -26,23 +26,10 @@ describe('test persistence management', () => {
 
   describe('session.start()', () => {
     describe('when an identifier is given', () => {
-      it('should not start again', async () => {
+      it('should load data from the storage', async () => {
         let store = new Backend()
         let _stub = stub(store, 'read')
         let session = createSession(store, 'abc123')
-
-        let flag = await session.start()
-
-        assert.equal(flag, false)
-        assert.equal(_stub.notCalled, true)
-      })
-    })
-
-    describe('when an identifier is not provided', () => {
-      it('should read the data from the storage', async () => {
-        let store = new Backend()
-        let _stub = stub(store, 'read')
-        let session = createSession(store)
 
         _stub.onFirstCall().returns({ 'foo': 'bar' })
 
@@ -51,6 +38,18 @@ describe('test persistence management', () => {
         assert.equal(session.get('foo'), 'bar')
         assert.equal(_stub.called, true)
         assert.equal(flag, true)
+      })
+    })
+
+    describe('when an identifier is not provided', () => {
+      it('should not read from the storage', async () => {
+        let store = new Backend()
+        let _stub = stub(store, 'read')
+        let session = createSession(store)
+
+        await session.start()
+
+        assert.equal(_stub.called, false)
       })
     })
   })
