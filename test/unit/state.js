@@ -3,7 +3,7 @@ const assert = require('assert')
 const { Session } = require('../../lib')
 
 
-function createSession (state) {
+function createSession (state = {}) {
   return new Session(null, 'test', state)
 }
 
@@ -78,6 +78,30 @@ describe('test the session state management', () => {
 
       assert.deepEqual(session.toJSON(), {})
       assert.equal(value, 'bar')
+    })
+  })
+
+  describe('session.isEmpty()', () => {
+    it('should return `true` if the state is empty, otherwise `false`', () => {
+      let session = createSession()
+
+      assert.equal(session.isEmpty(), true)
+
+      session.set('foo', 'bar')
+
+      assert.equal(session.isEmpty(), false)
+    })
+  })
+
+  describe('session.isDirty()', () => {
+    it('should return `true` if the session is modified', () => {
+      let session = createSession()
+
+      assert.equal(session.isDirty(), false)
+
+      session.set('foo', 'bar')
+
+      assert.equal(session.isDirty(), true)
     })
   })
 })

@@ -38,11 +38,18 @@ export declare class Session {
   setLifetime(value: number): this;
 
   /**
-   * Determine the state is empty or not
+   * Determine whether the state is empty or not
    * 
    * 
    */
   isEmpty(): boolean;
+
+  /**
+   * Determine whether the state is modified or not
+   * 
+   * 
+   */
+  isDirty(): boolean;
 
   /**
    * Set a key/value pair
