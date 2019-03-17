@@ -9,14 +9,6 @@
 export declare function createSession (backend: Storage, id?: string, state?: object): Session;
 
 /**
- * Create and load the session state from the storage backend.
- * 
- * @param backend The backend storage
- * @async
- */
-export declare function startSession (backend: Storage): Promise<Session>;
-
-/**
  * 
  */
 export declare class Session {
